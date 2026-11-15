@@ -1,6 +1,6 @@
 [package]
 name = "stereo-nudge"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Request Bluetooth stereo audio as soon as a paired headset connects."
 license = "MIT"

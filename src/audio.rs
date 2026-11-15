@@ -123,18 +123,7 @@ impl AudioEvents {
 impl IMMNotificationClient_Impl for AudioEvents_Impl {
     fn OnDeviceStateChanged(&self, id: &PCWSTR, state: DEVICE_STATE) -> Result<()> {
         let id = unsafe { id.to_string() }.unwrap_or_default();
-        if self.state.target.endpoint.eq_ignore_ascii_case(&id) {
-            let elapsed = self
-                .state
-                .connected_at
-                .lock()
-                .ok()
-                .and_then(|value| value.map(|start| start.elapsed().as_secs_f64() * 1000.0));
-            self.state.log(&format!(
-                "STEREO STATE={}; since_connection_ms={elapsed:?}",
-                state.0
-            ));
-        }
+        self.state.endpoint_changed(&id, state.0);
         Ok(())
     }
     fn OnDeviceAdded(&self, _: &PCWSTR) -> Result<()> {

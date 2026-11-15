@@ -6,7 +6,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -14,7 +14,19 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
       - run: cargo build --locked --release
-      - uses: actions/upload-artifact@v4
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          $setup = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' -OutFile $setup
+          if ((Get-FileHash $setup -Algorithm SHA256).Hash -ine '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732') { throw 'Inno Setup checksum mismatch' }
+          $process = Start-Process $setup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Inno Setup compiler installation failed' }
+      - name: Build Windows installer
+        run: .\scripts\Build-Installer.ps1
+      - name: Test installer lifecycle
+        run: .\scripts\Test-Installer.ps1 -SetupPath (Get-ChildItem .\dist\*-setup.exe | Select-Object -First 1 -ExpandProperty FullName)
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: stereo-nudge-windows-x64
-          path: target/release/stereo-nudge.exe
+          path: dist/
