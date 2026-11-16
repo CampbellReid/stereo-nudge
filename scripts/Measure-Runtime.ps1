@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Campbell Reid
+# SPDX-License-Identifier: GPL-3.0-or-later
 [CmdletBinding()]
 param(
     [int]$TargetProcessId,

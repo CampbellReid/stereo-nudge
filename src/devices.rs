@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Campbell Reid
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::audio::{self, Target};
 use std::{
     fs,

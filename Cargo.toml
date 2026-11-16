@@ -1,9 +1,11 @@
 [package]
 name = "stereo-nudge"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Request Bluetooth stereo audio as soon as a paired headset connects."
-license = "MIT"
+license = "GPL-3.0-or-later"
+authors = ["Campbell Reid"]
+repository = "https://github.com/CampbellReid/stereo-nudge"
 
 [dependencies]
 windows = { version = "0.62.2", features = [

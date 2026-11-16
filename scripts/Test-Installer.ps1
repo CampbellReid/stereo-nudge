@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Campbell Reid
+# SPDX-License-Identifier: GPL-3.0-or-later
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$SetupPath)
 $ErrorActionPreference = 'Stop'
@@ -17,6 +19,15 @@ function Run-Setup([string]$Tasks) {
 }
 try {
     Run-Setup 'startup'
+    $registration = Get-ItemProperty -LiteralPath $appKey
+    if ($registration.Publisher -ne 'Campbell Reid') { throw 'Installer author attribution is missing.' }
+    $expectedVersion = (Get-Item -LiteralPath $SetupPath).VersionInfo.ProductVersion
+    if ($registration.DisplayVersion -ne $expectedVersion) { throw 'Installed version differs from the installer version.' }
+    if ((Get-Content -LiteralPath (Join-Path $testRoot 'LICENSE') -Raw) -notmatch 'GNU GENERAL PUBLIC LICENSE') { throw 'The GPL licence is missing.' }
+    if ((Get-Content -LiteralPath (Join-Path $testRoot 'Project.url') -Raw) -notmatch 'URL=https://github.com/CampbellReid/stereo-nudge') { throw 'Installed project link is incorrect.' }
+    foreach ($notice in @('THIRD-PARTY-NOTICES.txt','licenses\rust\COPYRIGHT-library.html')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $testRoot $notice))) { throw "Missing third-party notice: $notice" }
+    }
     if (-not (Test-Path -LiteralPath $startupLink)) { throw 'Startup option did not create its shortcut.' }
     $shortcut = $shell.CreateShortcut($startupLink)
     if ($shortcut.TargetPath -ne (Join-Path $testRoot 'stereo-nudge.exe')) { throw 'Startup shortcut targets the wrong executable.' }
@@ -30,7 +41,7 @@ try {
     $process = Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -WindowStyle Hidden -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Uninstall failed with exit code $($process.ExitCode)" }
     if ((Test-Path -LiteralPath $startupLink) -or (Test-Path -LiteralPath $appKey) -or (Test-Path -LiteralPath (Join-Path $testRoot 'stereo-nudge.exe'))) { throw 'Uninstaller left installed application or startup state behind.' }
-    'PASS: per-user install, startup on/off/re-enable, and uninstall.'
+    'PASS: version, attribution, GPL/notices, per-user install, startup on/off/re-enable, and uninstall.'
 } finally {
     # Test logs remain in the named temp directory. Setup never changes device choices.
     [Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null

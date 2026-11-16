@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Campbell Reid
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::{STATE, State, audio};
 use std::{
     ffi::c_void,
@@ -167,6 +169,9 @@ unsafe fn show_menu(state: &Arc<State>, hwnd: HWND) {
         );
         let _ = AppendMenuW(menu, MF_STRING, 2, w!("Connect checked devices now"));
         let _ = AppendMenuW(menu, MF_STRING, 4, w!("Refresh paired devices"));
+        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+        let _ = AppendMenuW(menu, MF_STRING, 5, w!("Project on GitHub"));
+        let _ = AppendMenuW(menu, MF_STRING, 6, w!("About Stereo Nudge"));
         let _ = AppendMenuW(menu, MF_STRING, 3, w!("Exit"));
         let mut point = POINT::default();
         let _ = GetCursorPos(&mut point);
@@ -196,6 +201,32 @@ unsafe fn show_menu(state: &Arc<State>, hwnd: HWND) {
                 let _ = DestroyWindow(hwnd);
             }
             4 => state.refresh_devices(),
+            5 => {
+                let result = ShellExecuteW(
+                    Some(hwnd),
+                    w!("open"),
+                    w!("https://github.com/CampbellReid/stereo-nudge"),
+                    None,
+                    None,
+                    SW_SHOWNORMAL,
+                );
+                if result.0 as isize <= 32 {
+                    state.log("Could not open the project URL in the default browser");
+                }
+            }
+            6 => {
+                let text = format!(
+                    "Stereo Nudge {}\n\nCopyright (C) 2026 Campbell Reid\n\nFree software under the GNU General Public License,\nversion 3 or any later version. Comes with no warranty.\n\nSource, downloads and licence:\nhttps://github.com/CampbellReid/stereo-nudge\n\nSee LICENSE and THIRD-PARTY-NOTICES.txt in the install folder.",
+                    crate::VERSION
+                );
+                let text: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
+                let _ = MessageBoxW(
+                    Some(hwnd),
+                    PCWSTR(text.as_ptr()),
+                    w!("About Stereo Nudge"),
+                    MB_OK | MB_ICONINFORMATION,
+                );
+            }
             value if value >= 1000 => {
                 if let Some(device) = devices.get((value - 1000) as usize)
                     && (device.target.is_some() || selected.contains(&device.address))

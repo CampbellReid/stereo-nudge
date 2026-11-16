@@ -4,6 +4,12 @@ A small native Windows tray app that requests Bluetooth stereo audio as soon as 
 paired headset establishes its Bluetooth link. Written in Rust, with a static C
 runtime and no .NET requirement.
 
+Created by [Campbell Reid](https://github.com/CampbellReid).
+
+**[Download the Windows installer](https://github.com/CampbellReid/stereo-nudge/releases/latest/download/stereo-nudge-windows-x64-setup.exe)** ·
+[All releases and source](https://github.com/CampbellReid/stereo-nudge/releases) ·
+[Report an issue](https://github.com/CampbellReid/stereo-nudge/issues)
+
 ## The fix
 
 Windows first establishes a Bluetooth link to a headset, then connects its audio
@@ -21,7 +27,7 @@ See [how it works](docs/how-it-works.md) for the API sequence and limits.
 
 ## Windows installer
 
-Run `stereo-nudge-0.2.0-windows-x64-setup.exe` and optionally select **Run Stereo
+Download and run **stereo-nudge-windows-x64-setup.exe**, then optionally select **Run Stereo
 Nudge when I sign in to Windows**. You can launch it immediately when setup
 finishes. Setup does not ask you to select a device.
 
@@ -38,6 +44,13 @@ Change device choices in the tray at any time. Rerun setup to change the startup
 checkbox. Uninstall from Windows
 **Installed apps** or the Start menu. The uninstaller removes the startup shortcut;
 local settings and diagnostic logs are kept in `%LOCALAPPDATA%\StereoNudge`.
+
+Supports Windows 10/11 on x64 with classic Bluetooth audio. Everything needed to
+run the app is in the installer. Releases currently have no code-signing certificate.
+To upgrade, download and run a newer installer. There is no automatic update checker.
+
+The tray's **Project on GitHub** entry opens this repository. **About Stereo Nudge**
+shows the installed version, author and licence. The Start menu also links to GitHub.
 
 ## Build
 
@@ -72,6 +85,7 @@ The tray menu provides:
 - **Pause all automatic requests**: temporarily suspend requests for every device.
 - **Connect checked devices now**: send manual requests even while automatic requests are paused.
 - **Refresh paired devices**: reload the local Windows pairing list, also refreshed whenever the menu opens.
+- **Project on GitHub** and **About Stereo Nudge**: source, downloads, attribution and version information.
 - **Exit**: remove the icon and stop listening.
 
 Devices without a currently available classic stereo endpoint are shown disabled.
@@ -141,3 +155,36 @@ the log directory, or use the tray's **Exit** command.
 - [Bluetooth connection notifications](https://learn.microsoft.com/en-us/windows/win32/bluetooth/bluetooth-and-wm-devicechange-messages)
 - [KSPROPERTY_ONESHOT_RECONNECT](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/ksproperty-oneshot-reconnect)
 - [Microsoft's Rust Windows bindings](https://github.com/microsoft/windows-rs)
+
+## Releases
+
+Every successful push to `main` builds and tests a new version with GitHub Actions,
+then publishes its installer, corresponding source bundle and SHA-256 checksums
+on [GitHub Releases](https://github.com/CampbellReid/stereo-nudge/releases).
+The download link above always points to the latest installer. Other branches
+and pull requests are tested without publishing a release.
+
+Versions use the major/minor series in `Cargo.toml` and the workflow run number
+as the patch number, for example `0.3.12`. Numbers can have gaps. Re-running a job
+keeps the same version. See [release and rebuild instructions](docs/releases.md).
+
+## Licence and credits
+
+Copyright (C) 2026 Campbell Reid.
+
+Stereo Nudge is free software: you can redistribute it and/or modify it under the
+GNU General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+It is distributed in the hope that it will be useful, but **without any warranty**,
+including the implied warranties of merchantability or fitness for a particular
+purpose. See [LICENSE](LICENSE) for the full terms.
+
+Distributed modified versions must retain the applicable notices and provide
+corresponding source under the GPL. Each release includes a source archive with
+the locked Rust dependencies and the scripts needed to build it.
+
+Thanks to Microsoft for the Windows APIs and Rust Windows bindings, the Rust
+project and dependency authors, and Jordan Russell and Martijn Laan for
+[Inno Setup](https://jrsoftware.org/). Their original licences and copyright
+notices are included in the installer as `THIRD-PARTY-NOTICES.txt` and `licenses/rust`.

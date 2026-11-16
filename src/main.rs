@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Campbell Reid
+// SPDX-License-Identifier: GPL-3.0-or-later
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod app;
 mod audio;
@@ -18,6 +20,10 @@ use std::{
 };
 use windows::{Win32::System::Com::*, core::Result};
 static STATE: OnceLock<Arc<State>> = OnceLock::new();
+const VERSION: &str = match option_env!("STEREO_NUDGE_VERSION") {
+    Some(version) => version,
+    None => env!("CARGO_PKG_VERSION"),
+};
 
 struct Link {
     connected: bool,

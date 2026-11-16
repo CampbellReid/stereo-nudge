@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Campbell Reid
+// SPDX-License-Identifier: GPL-3.0-or-later
 use crate::config::parse_address;
 use std::{collections::BTreeSet, fs, path::Path};
 pub fn load(path: &Path) -> std::io::Result<BTreeSet<u64>> {

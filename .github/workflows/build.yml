@@ -1,19 +1,37 @@
-name: Windows build
-on: [push, pull_request, workflow_dispatch]
+name: Windows build and release
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: stereo-nudge-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
 jobs:
   windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Number this build
+        id: version
+        shell: pwsh
+        run: |
+          $manifest = Get-Content Cargo.toml -Raw
+          if ($manifest -notmatch '(?m)^version = "(\d+)\.(\d+)\.\d+"') { throw 'Invalid base version' }
+          $version = "$($Matches[1]).$($Matches[2]).$env:GITHUB_RUN_NUMBER"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "STEREO_NUDGE_VERSION=$version" >> $env:GITHUB_ENV
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
-      - run: cargo build --locked --release
       - name: Install Inno Setup compiler
         shell: pwsh
         run: |
@@ -22,11 +40,62 @@ jobs:
           if ((Get-FileHash $setup -Algorithm SHA256).Hash -ine '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732') { throw 'Inno Setup checksum mismatch' }
           $process = Start-Process $setup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER' -WindowStyle Hidden -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'Inno Setup compiler installation failed' }
-      - name: Build Windows installer
-        run: .\scripts\Build-Installer.ps1
+      - name: Package installer, corresponding source and checksums
+        shell: pwsh
+        run: .\scripts\Build-Release.ps1 -Version $env:STEREO_NUDGE_VERSION -Revision $env:GITHUB_SHA
       - name: Test installer lifecycle
-        run: .\scripts\Test-Installer.ps1 -SetupPath (Get-ChildItem .\dist\*-setup.exe | Select-Object -First 1 -ExpandProperty FullName)
+        run: .\scripts\Test-Installer.ps1 -SetupPath .\dist\stereo-nudge-windows-x64-setup.exe
       - uses: actions/upload-artifact@v7.0.2
         with:
-          name: stereo-nudge-windows-x64
-          path: dist/
+          name: release-${{ steps.version.outputs.version }}
+          if-no-files-found: error
+          path: |
+            dist/stereo-nudge-windows-x64-setup.exe
+            dist/*-source.tar.gz
+            dist/SHA256SUMS.txt
+  publish:
+    needs: windows
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: release-${{ needs.windows.outputs.version }}
+          path: release
+      - name: Publish a complete GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.windows.outputs.version }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum --check SHA256SUMS.txt
+          tag="v$VERSION"
+          if gh release view "$tag" --json isDraft > existing.json 2>/dev/null; then
+            actual=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
+            test "$actual" = "$REVISION" || { echo 'Release tag targets a different commit'; exit 1; }
+            if test "$(jq -r .isDraft existing.json)" = false; then
+              echo "Release $tag is already published; leaving its files intact."
+              exit 0
+            fi
+            gh release upload "$tag" stereo-nudge-windows-x64-setup.exe "stereo-nudge-$VERSION-source.tar.gz" SHA256SUMS.txt --clobber
+          else
+            cat > notes.md <<'NOTES'
+          **Stereo Nudge by Campbell Reid** — a native Windows tray app for eagerly requesting Bluetooth stereo audio.
+
+          Download **stereo-nudge-windows-x64-setup.exe** below. It is a standalone installer for Windows 10/11 on x64, with an optional **Run at startup** checkbox. No Rust, .NET or separate runtime installation is needed.
+
+          Launch it, open its tray menu and check your paired headphones. Install a newer release manually to upgrade; there is no automatic update checker.
+
+          Copyright (C) 2026 Campbell Reid. Licensed under **GPL-3.0-or-later**, without warranty. The matching **source.tar.gz** includes the app, build scripts and vendored Rust dependencies. **SHA256SUMS.txt** contains the download checksums.
+
+          [Project and documentation](https://github.com/CampbellReid/stereo-nudge) · [Report an issue](https://github.com/CampbellReid/stereo-nudge/issues) · [Licence](https://github.com/CampbellReid/stereo-nudge/blob/main/LICENSE)
+          NOTES
+            gh release create "$tag" --target "$REVISION" --draft --title "Stereo Nudge $VERSION" --notes-file notes.md --generate-notes stereo-nudge-windows-x64-setup.exe "stereo-nudge-$VERSION-source.tar.gz" SHA256SUMS.txt
+          fi
+          gh release edit "$tag" --draft=false --latest

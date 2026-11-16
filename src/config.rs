@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Campbell Reid
+// SPDX-License-Identifier: GPL-3.0-or-later
 use std::path::PathBuf;
 pub struct Options {
     pub address: u64,
