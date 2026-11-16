@@ -21,7 +21,7 @@ try {
     Run-Setup 'startup'
     $registration = Get-ItemProperty -LiteralPath $appKey
     if ($registration.Publisher -ne 'Campbell Reid') { throw 'Installer author attribution is missing.' }
-    $expectedVersion = (Get-Item -LiteralPath $SetupPath).VersionInfo.ProductVersion
+    $expectedVersion = (Get-Item -LiteralPath $SetupPath).VersionInfo.ProductVersion.Trim()
     if ($registration.DisplayVersion -ne $expectedVersion) { throw 'Installed version differs from the installer version.' }
     if ((Get-Content -LiteralPath (Join-Path $testRoot 'LICENSE') -Raw) -notmatch 'GNU GENERAL PUBLIC LICENSE') { throw 'The GPL licence is missing.' }
     if ((Get-Content -LiteralPath (Join-Path $testRoot 'Project.url') -Raw) -notmatch 'URL=https://github.com/CampbellReid/stereo-nudge') { throw 'Installed project link is incorrect.' }

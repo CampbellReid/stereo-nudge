@@ -76,13 +76,14 @@ jobs:
           cd release
           sha256sum --check SHA256SUMS.txt
           tag="v$VERSION"
-          if gh release view "$tag" --json isDraft > existing.json 2>/dev/null; then
-            actual=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
-            test "$actual" = "$REVISION" || { echo 'Release tag targets a different commit'; exit 1; }
+          if gh release view "$tag" --json isDraft,targetCommitish > existing.json 2>/dev/null; then
             if test "$(jq -r .isDraft existing.json)" = false; then
+              actual=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
+              test "$actual" = "$REVISION" || { echo 'Release tag targets a different commit'; exit 1; }
               echo "Release $tag is already published; leaving its files intact."
               exit 0
             fi
+            test "$(jq -r .targetCommitish existing.json)" = "$REVISION" || { echo 'Draft release targets a different commit'; exit 1; }
             gh release upload "$tag" stereo-nudge-windows-x64-setup.exe "stereo-nudge-$VERSION-source.tar.gz" SHA256SUMS.txt --clobber
           else
             cat > notes.md <<'NOTES'

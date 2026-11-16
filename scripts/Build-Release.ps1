@@ -48,9 +48,11 @@ try {
     & tar -czf $source -C $stage $name
     if ($LASTEXITCODE -ne 0) { throw 'Source archive creation failed.' }
     $checksums = Join-Path $dist 'SHA256SUMS.txt'
-    @($installer, $source) | ForEach-Object {
+    $checksumLines = @($installer, $source) | ForEach-Object {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $(Split-Path -Leaf $_)"
-    } | Set-Content -LiteralPath $checksums -Encoding ascii
+    }
+    # Linux verifies these files in the publish job, so write portable LF lines.
+    [IO.File]::WriteAllText($checksums, ($checksumLines -join "`n")+"`n", [Text.Encoding]::ASCII)
     [pscustomobject]@{ Version = $Version; Installer = $installer; Source = $source; Checksums = $checksums }
 } finally { Pop-Location }
